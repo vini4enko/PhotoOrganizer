@@ -1,0 +1,256 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ExifApp.ViewModels"
+        xmlns:models="using:ExifApp.Models"
+        xmlns:conv="using:ExifApp.Converters"
+        xmlns:configuration="using:ExifApp.Configuration"
+        x:Class="ExifApp.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="JPEG EXIF Viewer"
+        Width="1280" Height="860"
+        WindowStartupLocation="CenterScreen">
+
+    <!-- Горячие клавиши: Ctrl+E — открыть во внешней программе -->
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+E"
+                    Command="{Binding OpenInExternalEditorCommand}"/>
+    </Window.KeyBindings>
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
+
+        <!-- Верхняя панель: кнопки управления, строка 0 -->
+        <Border Grid.Row="0"
+                Background="#F0F0F0"
+                Padding="10"
+                BorderBrush="LightGray"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, *">
+
+                <Button Grid.Column="0"
+                        Content="📁 Открыть фото"
+                        Click="OnLoadImageClick"
+                        Padding="15,8"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Margin="15,0,0,0"
+                            VerticalAlignment="Center">
+                    <Button Content="⏮ Предыдущий (←)"
+                            Command="{Binding PreviousCommand}"
+                            Padding="12,8"
+                            ToolTip.Tip="Предыдущая фотография (стрелка влево)"/>
+                    <Button Content="Следующий (→) ⏭"
+                            Command="{Binding NextCommand}"
+                            Padding="12,8"
+                            ToolTip.Tip="Следующая фотография (стрелка вправо)"/>
+                </StackPanel>
+
+                <ComboBox Grid.Column="2"
+                          ItemsSource="{Binding ExternalEditors}"
+                          SelectedItem="{Binding SelectedExternalEditor}"
+                          Width="220"
+                          Margin="15,0,0,0"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="Выберите внешнюю программу">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="configuration:ExternalEditor">
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button Grid.Column="3"
+                        Content="🚀 Открыть (Ctrl+E)"
+                        Command="{Binding OpenInExternalEditorCommand}"
+                        Padding="12,8"
+                        Margin="8,0,0,0"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Запустить выбранную программу для текущего файла"/>
+
+                <Button Grid.Column="4"
+                        Content="🗑 Удалить (Del)"
+                        Command="{Binding DeleteCurrentFileCommand}"
+                        Padding="12,8"
+                        Margin="8,0,0,0"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Удалить текущий файл (клавиша Delete). Потребуется подтверждение."/>
+            </Grid>
+        </Border>
+
+        <!-- Строка статуса, строка 1 -->
+        <Border Grid.Row="1"
+                Background="#FAFAFA"
+                Padding="12,6"
+                BorderBrush="LightGray"
+                BorderThickness="0,0,0,1">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="#555"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Основная область, строка 2 -->
+        <Grid Grid.Row="2" RowDefinitions="Auto, *">
+
+            <!-- Путь к файлу -->
+            <Border Grid.Row="0"
+                    Margin="10,10,10,0"
+                    Padding="10,8"
+                    Background="#F8F8F8"
+                    BorderBrush="LightGray"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid ColumnDefinitions="Auto, *">
+                    <TextBlock Grid.Column="0"
+                               Text="Путь к файлу:"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <SelectableTextBlock Grid.Column="1"
+                                         Text="{Binding SelectedFilePath}"
+                                         VerticalAlignment="Center"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="NoWrap"/>
+                </Grid>
+            </Border>
+
+            <!-- Изображение и метаданные -->
+            <Grid Grid.Row="1" ColumnDefinitions="*, 480">
+
+                <Border Grid.Column="0"
+                        Margin="10"
+                        BorderBrush="LightGray"
+                        BorderThickness="1"
+                        Background="#FAFAFA">
+                    <Image x:Name="PhotoImage"
+                           Source="{Binding Photo}"
+                           Stretch="Uniform"
+                           Margin="5"
+                           Cursor="Hand"
+                           DoubleTapped="OnPhotoDoubleTapped"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                           ToolTip.Tip="Двойной щелчок — открыть во внешней программе"/>
+                </Border>
+
+                <Border Grid.Column="1"
+                        Margin="0,10,10,10"
+                        BorderBrush="LightGray"
+                        BorderThickness="1">
+                    <Grid RowDefinitions="Auto, Auto, *">
+
+                        <TextBlock Grid.Row="0"
+                                   Text="EXIF Метаданные"
+                                   FontWeight="Bold"
+                                   Padding="10,8"
+                                   Background="#F0F0F0"/>
+
+                        <Border Grid.Row="1"
+                                Padding="10,8"
+                                Background="#FBFBFB"
+                                BorderBrush="LightGray"
+                                BorderThickness="0,0,0,1">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Фильтр:"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock VerticalAlignment="Center"
+                                               Foreground="Gray"
+                                               Text="{Binding IsFilterEnabled, Converter={x:Static conv:BoolToFilterTextConverter.Instance}}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding IsFilterEnabled}"
+                                              OnContent="ВКЛ"
+                                              OffContent="ВЫКЛ"
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <ListBox Grid.Row="2"
+                                 ItemsSource="{Binding MetadataList}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ExifItem">
+                                    <Grid ColumnDefinitions="120, 150, *" Margin="0,2">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Directory}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#0066CC"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,0,5,0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding TagName}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,0,5,0"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding Value}"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Лента миниатюр, строка 3 -->
+        <Border Grid.Row="3"
+                Background="#F0F0F0"
+                BorderBrush="LightGray"
+                BorderThickness="0,1,0,0"
+                Height="130">
+            <ListBox x:Name="ThumbnailsListBox"
+                     ItemsSource="{Binding PhotoList}"
+                     SelectedIndex="{Binding CurrentIndex, Mode=TwoWay}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="6"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="2"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="2"/>
+                        <Setter Property="Margin" Value="1"/>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:PhotoEntry">
+                        <StackPanel Width="112" ToolTip.Tip="{Binding FilePath}">
+                            <Border BorderBrush="#DDD"
+                                    BorderThickness="1"
+                                    Background="White">
+                                <Image Source="{Binding Thumbnail}"
+                                       Width="100"
+                                       Height="72"
+                                       Stretch="Uniform"/>
+                            </Border>
+                            <TextBlock Text="{Binding FileName}"
+                                       FontSize="10"
+                                       TextTrimming="CharacterEllipsis"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </Grid>
+</Window>
