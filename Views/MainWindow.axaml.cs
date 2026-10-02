@@ -168,4 +168,58 @@ public partial class MainWindow : Window
         var window = new SettingsWindow(vm.SettingsService);
         await window.ShowDialog(this);
     }
+    // ---------- Обработчики меню ----------
+
+    private void OnExitClick(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private async void OnAboutClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        await vm.DialogService.ShowInfoAsync(
+            "О программе",
+            "PhotoOrganizer\n\n" +
+            "Просмотр и организация фотографий\n" +
+            "с поддержкой EXIF-метаданных.\n\n" +
+            "Avalonia 12 · .NET 9 · MetadataExtractor · Magick.NET");
+    }
+
+    private async void OnEditExifClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        await vm.DialogService.ShowInfoAsync(
+            "Редактирование EXIF",
+            "Функционал в разработке.\n\n" +
+            "Планируется редактирование тегов:\n" +
+            "JPEG Comment, Date/Time Original, GPS Latitude/Longitude.");
+    }
+
+    private async void OnDbSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        // Открывает тот же редактор appsettings.json — пользователь вручную правит
+        // секцию "Database.ConnectionString"
+        var window = new SettingsWindow(vm.SettingsService);
+        await window.ShowDialog(this);
+    }
+
+    private async void OnDbTestClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var cs = vm.SettingsService.Current.Database.ConnectionString;
+        var hasCs = !string.IsNullOrWhiteSpace(cs);
+
+        await vm.DialogService.ShowInfoAsync(
+            "Связь с БД",
+            hasCs
+                ? $"Строка подключения:\n{cs}\n\nПроверка подключения — в разработке."
+                : "Строка подключения не задана.\n" +
+                  "Откройте «Связь с БД → Настройки подключения…» и заполните Database.ConnectionString.");
+    }
 }

@@ -6,63 +6,115 @@
         xmlns:configuration="using:ExifApp.Configuration"
         x:Class="ExifApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="JPEG EXIF Viewer"
+        Title="PhotoOrganizer"
         Width="1280" Height="860"
         WindowStartupLocation="CenterScreen">
 
-    <!-- Горячие клавиши: Ctrl+E — открыть во внешней программе -->
-    <Window.KeyBindings>
-        <KeyBinding Gesture="Ctrl+E"
-                    Command="{Binding OpenInExternalEditorCommand}"/>
-    </Window.KeyBindings>
+    <Grid RowDefinitions="Auto, Auto, Auto, *, Auto">
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel />
-    </Design.DataContext>
+        <!-- ========== Меню ========== -->
+        <Menu Grid.Row="0" Background="#FAFAFA">
 
-    <Grid RowDefinitions="Auto, Auto, *, Auto">
+            <MenuItem Header="_Файл">
+                <MenuItem Header="_Открыть…"
+                          Click="OnLoadImageClick"
+                          HotKey="Ctrl+O"
+                          InputGesture="Ctrl+O"/>
+                <MenuItem Header="Открыть _во внешней программе"
+                          Command="{Binding OpenInExternalEditorCommand}"
+                          HotKey="Ctrl+E"
+                          InputGesture="Ctrl+E"/>
+                <MenuItem Header="Конвертировать PNG → _JPEG"
+                          Command="{Binding ConvertToJpegCommand}"/>
+                <Separator/>
+                <MenuItem Header="_Удалить файл"
+                          Command="{Binding DeleteCurrentFileCommand}"
+                          InputGesture="Delete"/>
+                <Separator/>
+                <MenuItem Header="В_ыход" Click="OnExitClick"/>
+            </MenuItem>
 
-        <!-- Верхняя панель: кнопки управления, строка 0 -->
-        <Border Grid.Row="0"
+            <MenuItem Header="_Правка">
+                <MenuItem Header="_Редактировать EXIF…" Click="OnEditExifClick"/>
+                <Separator/>
+                <MenuItem Header="_Настройки…"
+                          Click="OnOpenSettingsClick"
+                          InputGesture="Ctrl+,"/>
+            </MenuItem>
+
+            <MenuItem Header="_Вид">
+                <MenuItem Header="Сканировать подкаталоги"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding ScanSubdirectories}"/>
+                <MenuItem Header="Фильтр по AllowedTags"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsFilterEnabled}"/>
+                <Separator/>
+                <MenuItem Header="_Предыдущий"
+                          Command="{Binding PreviousCommand}"
+                          InputGesture="Left"/>
+                <MenuItem Header="_Следующий"
+                          Command="{Binding NextCommand}"
+                          InputGesture="Right"/>
+            </MenuItem>
+
+            <MenuItem Header="_Связь с БД">
+                <MenuItem Header="Настройки подключения…"
+                          Click="OnDbSettingsClick"/>
+                <MenuItem Header="Проверить подключение"
+                          Click="OnDbTestClick"/>
+                <Separator/>
+                <MenuItem Header="Синхронизировать каталог в БД"
+                          IsEnabled="False"
+                          ToolTip.Tip="Функционал в разработке"/>
+                <MenuItem Header="Список фотографий из БД"
+                          IsEnabled="False"
+                          ToolTip.Tip="Функционал в разработке"/>
+            </MenuItem>
+
+            <MenuItem Header="_Справка">
+                <MenuItem Header="_О программе" Click="OnAboutClick"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ========== Панель быстрых действий ========== -->
+        <Border Grid.Row="1"
                 Background="#F0F0F0"
-                Padding="10"
+                Padding="8,6"
                 BorderBrush="LightGray"
                 BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, *">
+            <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, *, Auto">
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <Button Content="📁 Открыть фото"
-                            Click="OnLoadImageClick"
-                            Padding="15,8"
-                            FontWeight="SemiBold"
-                            VerticalAlignment="Center"/>
-                    <CheckBox Content="С подкаталогами"
-                              IsChecked="{Binding ScanSubdirectories}"
-                              VerticalAlignment="Center"
-                              ToolTip.Tip="Включать файлы из вложенных папок"/>
-                </StackPanel>
+                <Button Grid.Column="0"
+                        Content="📁"
+                        Click="OnLoadImageClick"
+                        Padding="10,6"
+                        FontSize="14"
+                        ToolTip.Tip="Открыть фото (Ctrl+O)"/>
+
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
-                            Spacing="6"
-                            Margin="15,0,0,0"
-                            VerticalAlignment="Center">
-                    <Button Content="⏮ Предыдущий (←)"
+                            Spacing="4"
+                            Margin="6,0,0,0">
+                    <Button Content="⏮"
                             Command="{Binding PreviousCommand}"
-                            Padding="12,8"
-                            ToolTip.Tip="Предыдущая фотография (стрелка влево)"/>
-                    <Button Content="Следующий (→) ⏭"
+                            Padding="10,6"
+                            FontSize="14"
+                            ToolTip.Tip="Предыдущий (←)"/>
+                    <Button Content="⏭"
                             Command="{Binding NextCommand}"
-                            Padding="12,8"
-                            ToolTip.Tip="Следующая фотография (стрелка вправо)"/>
+                            Padding="10,6"
+                            FontSize="14"
+                            ToolTip.Tip="Следующий (→)"/>
                 </StackPanel>
 
                 <ComboBox Grid.Column="2"
                           ItemsSource="{Binding ExternalEditors}"
                           SelectedItem="{Binding SelectedExternalEditor}"
                           Width="220"
-                          Margin="15,0,0,0"
+                          Margin="10,0,0,0"
                           VerticalAlignment="Center"
-                          ToolTip.Tip="Выберите внешнюю программу">
+                          ToolTip.Tip="Внешняя программа для просмотра">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="configuration:ExternalEditor">
                             <TextBlock Text="{Binding Name}"/>
@@ -71,44 +123,37 @@
                 </ComboBox>
 
                 <Button Grid.Column="3"
-                        Content="🚀 Открыть (Ctrl+E)"
+                        Content="🚀"
                         Command="{Binding OpenInExternalEditorCommand}"
-                        Padding="12,8"
-                        Margin="8,0,0,0"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Запустить выбранную программу для текущего файла"/>
+                        Padding="10,6"
+                        FontSize="14"
+                        Margin="6,0,0,0"
+                        ToolTip.Tip="Открыть во внешней программе (Ctrl+E)"/>
 
                 <Button Grid.Column="4"
-                        Content="🗑 Удалить (Del)"
+                        Content="🗑"
                         Command="{Binding DeleteCurrentFileCommand}"
-                        Padding="12,8"
-                        Margin="8,0,0,0"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Удалить текущий файл (клавиша Delete). Потребуется подтверждение."/>
+                        Padding="10,6"
+                        FontSize="14"
+                        Margin="6,0,0,0"
+                        ToolTip.Tip="Удалить текущий файл (Del)"/>
 
-                <Button Grid.Column="5"
-                        Content="⚙ Настройки"
-                        Click="OnOpenSettingsClick"
-                        Padding="12,8"
-                        Margin="8,0,0,0"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Редактировать appsettings.json"/>
-                <Button Grid.Column="6"
-                        Content="🖼 PNG → JPEG"
-                        Command="{Binding ConvertToJpegCommand}"
-                        Padding="12,8"
-                        Margin="8,0,0,0"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Конвертировать текущий PNG в JPEG. Оригинал сохраняется."/>
+                <Border Grid.Column="6"
+                        Padding="10,4"
+                        Background="#E8E8E8"
+                        CornerRadius="4"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PositionText}"
+                               FontWeight="SemiBold"
+                               Foreground="#444"
+                               MinWidth="60"
+                               TextAlignment="Center"/>
+                </Border>
             </Grid>
         </Border>
 
-        <!-- Строка статуса, строка 1 -->
-        <Border Grid.Row="1"
+        <!-- ========== Строка статуса ========== -->
+        <Border Grid.Row="2"
                 Background="#FAFAFA"
                 Padding="12,6"
                 BorderBrush="LightGray"
@@ -119,10 +164,9 @@
                        VerticalAlignment="Center"/>
         </Border>
 
-        <!-- Основная область, строка 2 -->
-        <Grid Grid.Row="2" RowDefinitions="Auto, *">
+        <!-- ========== Основная область ========== -->
+        <Grid Grid.Row="3" RowDefinitions="Auto, *">
 
-            <!-- Путь к файлу -->
             <Border Grid.Row="0"
                     Margin="10,10,10,0"
                     Padding="10,8"
@@ -144,9 +188,7 @@
                 </Grid>
             </Border>
 
-            <!-- Изображение и метаданные -->
             <Grid Grid.Row="1" ColumnDefinitions="*, 480">
-
                 <Border Grid.Column="0"
                         Margin="10"
                         BorderBrush="LightGray"
@@ -167,7 +209,6 @@
                         BorderBrush="LightGray"
                         BorderThickness="1">
                     <Grid RowDefinitions="Auto, Auto, *">
-
                         <TextBlock Grid.Row="0"
                                    Text="EXIF Метаданные"
                                    FontWeight="Bold"
@@ -199,8 +240,7 @@
                             </Grid>
                         </Border>
 
-                        <ListBox Grid.Row="2"
-                                 ItemsSource="{Binding MetadataList}">
+                        <ListBox Grid.Row="2" ItemsSource="{Binding MetadataList}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="models:ExifItem">
                                     <Grid ColumnDefinitions="120, 150, *" Margin="0,2">
@@ -227,8 +267,8 @@
             </Grid>
         </Grid>
 
-        <!-- Лента миниатюр, строка 3 -->
-        <Border Grid.Row="3"
+        <!-- ========== Лента миниатюр ========== -->
+        <Border Grid.Row="4"
                 Background="#F0F0F0"
                 BorderBrush="LightGray"
                 BorderThickness="0,1,0,0"
@@ -255,13 +295,9 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:PhotoEntry">
                         <StackPanel Width="112" ToolTip.Tip="{Binding FilePath}">
-                            <Border BorderBrush="#DDD"
-                                    BorderThickness="1"
-                                    Background="White">
+                            <Border BorderBrush="#DDD" BorderThickness="1" Background="White">
                                 <Image Source="{Binding Thumbnail}"
-                                       Width="100"
-                                       Height="72"
-                                       Stretch="Uniform"/>
+                                       Width="100" Height="72" Stretch="Uniform"/>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
                                        FontSize="10"

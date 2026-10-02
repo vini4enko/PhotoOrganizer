@@ -28,6 +28,8 @@ public partial class MainWindowViewModel : ObservableObject
     private int _currentIndex = -1;
     private readonly AppSettingsService _settingsService;
     private readonly IDialogService _dialogService;
+    public AppSettingsService SettingsService => _settingsService;
+    public IDialogService DialogService => _dialogService;
 
     [ObservableProperty]
     private Bitmap? _photo;
@@ -63,7 +65,6 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(OpenInExternalEditorCommand))]
 
     private ExternalEditor? _selectedExternalEditor;
-    public AppSettingsService SettingsService => _settingsService;
 
     /// <summary>
     /// Список доступных внешних программ (из appsettings.json).
