@@ -64,10 +64,11 @@ public class ImageConversionService
             return MagickColors.White;
 
         // Именованные цвета ("White", "Black", ...)
-        var named = MagickColors.GetType()
-            .GetProperty(value, System.Reflection.BindingFlags.IgnoreCase
-                             | System.Reflection.BindingFlags.Public
-                             | System.Reflection.BindingFlags.Static);
+        var named = typeof(MagickColors)
+            .GetProperty(value,
+                System.Reflection.BindingFlags.IgnoreCase
+                | System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.Static);
 
         if (named?.GetValue(null) is IMagickColor<ushort> c)
             return c;
@@ -84,10 +85,9 @@ public class ImageConversionService
                 // Игнорируем — ниже вернём белый
             }
         }
-        
+
         return MagickColors.White;
     }
-
     private static string BuildUniquePath(string directory, string baseName, string extension)
     {
         for (int i = 1; i < 10000; i++)
