@@ -8,6 +8,7 @@ public class AppSettings
     public string[] AllowedTags { get; set; } = Array.Empty<string>();
     public List<ExternalEditor> ExternalEditors { get; set; } = new();
     public ImageConversionSettings ImageConversion { get; set; } = new();
+    public bool ScanSubdirectories { get; set; }
 }
 
 public class ExternalEditor

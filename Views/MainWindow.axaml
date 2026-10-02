@@ -30,13 +30,17 @@
                 BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, *">
 
-                <Button Grid.Column="0"
-                        Content="📁 Открыть фото"
-                        Click="OnLoadImageClick"
-                        Padding="15,8"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"/>
-
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <Button Content="📁 Открыть фото"
+                            Click="OnLoadImageClick"
+                            Padding="15,8"
+                            FontWeight="SemiBold"
+                            VerticalAlignment="Center"/>
+                    <CheckBox Content="С подкаталогами"
+                              IsChecked="{Binding ScanSubdirectories}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="Включать файлы из вложенных папок"/>
+                </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             Spacing="6"

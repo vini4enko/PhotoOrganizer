@@ -53,11 +53,15 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private bool _scanSubdirectories;
+
     /// <summary>
     /// Выбранная внешняя программа.
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenInExternalEditorCommand))]
+
     private ExternalEditor? _selectedExternalEditor;
     public AppSettingsService SettingsService => _settingsService;
 
@@ -84,11 +88,17 @@ public partial class MainWindowViewModel : ObservableObject
         _settingsService = settingsService;
         _dialogService = dialogService;
 
+        // Загружаем стартовое значение
+        ScanSubdirectories = _settingsService.Current.ScanSubdirectories;
 
         ReloadExternalEditors();
 
-        _settingsService.SettingsChanged += _ =>
+        _settingsService.SettingsChanged += settings =>
         {
+            // Если файл настроек изменили извне — подхватить значение
+            if (ScanSubdirectories != settings.ScanSubdirectories)
+                ScanSubdirectories = settings.ScanSubdirectories;
+
             ReloadExternalEditors();
             ApplyFilter();
             OpenInExternalEditorCommand.NotifyCanExecuteChanged();
@@ -118,6 +128,14 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (value >= 0 && value < PhotoList.Count)
             _ = NavigateToAsync(value);
+    }
+
+    partial void OnScanSubdirectoriesChanged(bool value)
+    {
+        if (!string.IsNullOrEmpty(SelectedFilePath))
+        {
+            _ = ReloadCurrentDirectoryAsync();
+        }
     }
 
     // ---------- Навигация ----------
@@ -305,7 +323,34 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     // ---------- Загрузка ----------
+    /// <summary>
+    /// Асинхронная загрузка миниатюр для всех фотографий.
+    /// </summary>
+    private async Task LoadThumbnailsAsync()
+    {
+        var snapshot = PhotoList.ToList();
 
+        await Task.Run(() =>
+        {
+            Parallel.ForEach(snapshot,
+                new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                entry =>
+                {
+                    if (entry.Thumbnail != null) return;
+                    try
+                    {
+                        using var stream = File.OpenRead(entry.FilePath);
+                        var bmp = Bitmap.DecodeToWidth(stream, 128);
+                        // Присваивание свойства — на UI-потоке
+                        Dispatcher.UIThread.Post(() => entry.Thumbnail = bmp);
+                    }
+                    catch
+                    {
+                        // Игнорируем ошибки отдельных миниатюр
+                    }
+                });
+        });
+    }
     public async Task LoadImageFromPathAsync(string path)
     {
         var directory = Path.GetDirectoryName(path);
@@ -314,13 +359,19 @@ public partial class MainWindowViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            StatusMessage = "Сканирование каталога...";
+            StatusMessage = ScanSubdirectories
+                ? "Сканирование каталога и подкаталогов..."
+                : "Сканирование каталога...";
+
+            var searchOption = ScanSubdirectories
+                ? SearchOption.AllDirectories
+                : SearchOption.TopDirectoryOnly;
 
             List<string> files;
             try
             {
                 files = System.IO.Directory
-                    .EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+                    .EnumerateFiles(directory, "*.*", searchOption)
                     .Where(IsSupportedImage)
                     .ToList();
             }
@@ -330,6 +381,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
+            // Читаем Date/Time Original параллельно для каждого файла
             var entries = await Task.Run(() =>
             {
                 var result = new PhotoEntry[files.Count];
@@ -346,12 +398,15 @@ public partial class MainWindowViewModel : ObservableObject
                 return result;
             });
 
+            // Сортируем по возрастанию Date/Time Original
             var sorted = entries.OrderBy(e => e.DateTaken).ThenBy(e => e.FileName).ToList();
 
+            // Полностью обновляем коллекцию
             PhotoList.Clear();
             foreach (var e in sorted) PhotoList.Add(e);
             TotalCount = PhotoList.Count;
 
+            // Находим индекс выбранного файла
             int index = 0;
             for (int i = 0; i < PhotoList.Count; i++)
             {
@@ -362,8 +417,10 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
 
+            // Установка CurrentIndex запускает NavigateToAsync через OnCurrentIndexChanged
             CurrentIndex = index;
 
+            // Миниатюры грузим в фоне, не блокируя UI
             _ = LoadThumbnailsAsync();
         }
         finally
@@ -371,28 +428,6 @@ public partial class MainWindowViewModel : ObservableObject
             IsBusy = false;
         }
     }
-    private async Task LoadThumbnailsAsync()
-    {
-        var snapshot = PhotoList.ToList();
-
-        await Task.Run(() =>
-        {
-            Parallel.ForEach(snapshot,
-                new ParallelOptions { MaxDegreeOfParallelism = 4 },
-                entry =>
-                {
-                    if (entry.Thumbnail != null) return;
-                    try
-                    {
-                        using var stream = File.OpenRead(entry.FilePath);
-                        var bmp = Bitmap.DecodeToWidth(stream, 128);
-                        Dispatcher.UIThread.Post(() => entry.Thumbnail = bmp);
-                    }
-                    catch { }
-                });
-        });
-    }
-
     private async Task NavigateToAsync(int index)
     {
         if (index < 0 || index >= PhotoList.Count) return;
@@ -436,6 +471,13 @@ public partial class MainWindowViewModel : ObservableObject
                 IsBusy = false;
         }
     }
+    
+    private async Task ReloadCurrentDirectoryAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedFilePath)) return;
+        await LoadImageFromPathAsync(SelectedFilePath);
+    }
+
 
     // ---------- EXIF ----------
 
