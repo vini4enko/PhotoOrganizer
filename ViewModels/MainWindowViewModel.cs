@@ -16,14 +16,14 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 
 namespace ExifApp.ViewModels;
-
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NextCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviousCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInExternalEditorCommand))]
-    [NotifyCanExecuteChangedFor(nameof(DeleteCurrentFileCommand))]  // <-- добавлено
+    [NotifyCanExecuteChangedFor(nameof(DeleteCurrentFileCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertToJpegCommand))]
     [NotifyPropertyChangedFor(nameof(PositionText))]
     private int _currentIndex = -1;
     private readonly AppSettingsService _settingsService;
@@ -59,6 +59,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenInExternalEditorCommand))]
     private ExternalEditor? _selectedExternalEditor;
+    public AppSettingsService SettingsService => _settingsService;
 
     /// <summary>
     /// Список доступных внешних программ (из appsettings.json).
@@ -72,6 +73,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly ObservableCollection<ExifItem> _allMetadata = new();
     public ObservableCollection<ExifItem> MetadataList { get; } = new();
+    private readonly ImageConversionService _conversionService = new();
 
     private int _navVersion;
 
@@ -81,6 +83,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _settingsService = settingsService;
         _dialogService = dialogService;
+
 
         ReloadExternalEditors();
 
@@ -251,6 +254,53 @@ public partial class MainWindowViewModel : ObservableObject
             TotalCount = 0;
             CurrentIndex = -1;
             StatusMessage = $"Удалён: {deletedName}. В каталоге не осталось изображений";
+        }
+    }
+
+    // ---------- Конвертация PNG → JPEG ----------
+
+    private bool CanConvertToJpeg =>
+        CurrentIndex >= 0
+        && CurrentIndex < PhotoList.Count
+        && PhotoList[CurrentIndex].FilePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
+
+    [RelayCommand(CanExecute = nameof(CanConvertToJpeg))]
+    private async Task ConvertToJpegAsync()
+    {
+        if (CurrentIndex < 0 || CurrentIndex >= PhotoList.Count) return;
+
+        var entry = PhotoList[CurrentIndex];
+        var settings = _settingsService.Current.ImageConversion;
+
+        IsBusy = true;
+        string targetPath;
+        try
+        {
+            targetPath = await Task.Run(() =>
+                _conversionService.ConvertPngToJpeg(entry.FilePath, settings));
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Ошибка конвертации", ex.Message);
+            return;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        var created = await _dialogService.ShowConfirmAsync(
+            "Конвертация завершена",
+            $"Создан файл:\n{targetPath}\n\nПерейти к нему?");
+
+        if (created)
+        {
+            // Перезагружаем каталог — в нём появился новый .jpg
+            await LoadImageFromPathAsync(targetPath);
+        }
+        else
+        {
+            StatusMessage = $"Создан: {Path.GetFileName(targetPath)}";
         }
     }
 

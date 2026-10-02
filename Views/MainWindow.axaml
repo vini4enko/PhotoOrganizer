@@ -28,7 +28,7 @@
                 Padding="10"
                 BorderBrush="LightGray"
                 BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, *">
+            <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, *">
 
                 <Button Grid.Column="0"
                         Content="📁 Открыть фото"
@@ -83,6 +83,23 @@
                         FontWeight="SemiBold"
                         VerticalAlignment="Center"
                         ToolTip.Tip="Удалить текущий файл (клавиша Delete). Потребуется подтверждение."/>
+
+                <Button Grid.Column="5"
+                        Content="⚙ Настройки"
+                        Click="OnOpenSettingsClick"
+                        Padding="12,8"
+                        Margin="8,0,0,0"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Редактировать appsettings.json"/>
+                <Button Grid.Column="6"
+                        Content="🖼 PNG → JPEG"
+                        Command="{Binding ConvertToJpegCommand}"
+                        Padding="12,8"
+                        Margin="8,0,0,0"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Конвертировать текущий PNG в JPEG. Оригинал сохраняется."/>
             </Grid>
         </Border>
 

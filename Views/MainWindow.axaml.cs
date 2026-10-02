@@ -160,4 +160,12 @@ public partial class MainWindow : Window
             await vm.LoadImageFromPathAsync(localPath);
         }
     }
+    private async void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        // Получить AppSettingsService из ViewModel
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var window = new SettingsWindow(vm.SettingsService);
+        await window.ShowDialog(this);
+    }
 }

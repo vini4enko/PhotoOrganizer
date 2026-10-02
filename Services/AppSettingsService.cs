@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using ExifApp.Configuration;
 using Microsoft.Extensions.Configuration;
 
@@ -12,22 +13,23 @@ public class AppSettingsService
     private AppSettings _current;
 
     /// <summary>
-    /// Событие возникает при перезагрузке appsettings.json.
+    /// Полный путь к appsettings.json рядом с .exe.
     /// </summary>
+    public string SettingsFilePath { get; }
+
     public event Action<AppSettings>? SettingsChanged;
 
     public AppSettingsService()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        SettingsFilePath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
         _configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile(path, optional: false, reloadOnChange: true)
+            .AddJsonFile(SettingsFilePath, optional: false, reloadOnChange: true)
             .Build();
 
         _current = LoadSettings();
 
-        // Подписка на изменения файла
         _configuration.GetReloadToken().RegisterChangeCallback(_ =>
         {
             _current = LoadSettings();
@@ -37,18 +39,37 @@ public class AppSettingsService
 
     public AppSettings Current => _current;
 
+    /// <summary>
+    /// Читает содержимое appsettings.json как текст.
+    /// </summary>
+    public string ReadRawJson() => File.ReadAllText(SettingsFilePath);
+
+    /// <summary>
+    /// Сохраняет содержимое appsettings.json. Бросает исключение при невалидном JSON.
+    /// </summary>
+    public void SaveRawJson(string json)
+    {
+        // Валидация: пробуем распарсить до записи в файл
+        using (JsonDocument.Parse(json)) { }
+
+        File.WriteAllText(SettingsFilePath, json);
+
+        // Форсируем перезагрузку (reloadOnChange тоже сработает, но не сразу)
+        _configuration.Reload();
+        _current = LoadSettings();
+        SettingsChanged?.Invoke(_current);
+    }
+
     private AppSettings LoadSettings()
     {
         var settings = new AppSettings();
         _configuration.GetSection("AppSettings").Bind(settings);
 
-        // Защита от пустого/отсутствующего списка
         if (settings.AllowedTags is null || settings.AllowedTags.Length == 0)
         {
             settings.AllowedTags = new[] { "Model" };
         }
 
-        // Убираем пустые строки и пробелы по краям
         settings.AllowedTags = settings.AllowedTags
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Select(t => t.Trim())
