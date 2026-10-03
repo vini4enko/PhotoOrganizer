@@ -1,4 +1,5 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ExifApp.ViewModels"
         xmlns:models="using:ExifApp.Models"
@@ -45,10 +46,10 @@
             <MenuItem Header="_Вид">
                 <MenuItem Header="Сканировать подкаталоги"
                           ToggleType="CheckBox"
-                          IsChecked="{Binding ScanSubdirectories}"/>
+                          IsChecked="{Binding ScanSubdirectories, Mode=TwoWay}"/>
                 <MenuItem Header="Фильтр по AllowedTags"
                           ToggleType="CheckBox"
-                          IsChecked="{Binding IsFilterEnabled}"/>
+                          IsChecked="{Binding IsFilterEnabled, Mode=TwoWay}"/>
                 <Separator/>
                 <MenuItem Header="_Предыдущий"
                           Command="{Binding PreviousCommand}"

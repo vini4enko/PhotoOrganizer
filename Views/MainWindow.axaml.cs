@@ -207,19 +207,41 @@ public partial class MainWindow : Window
         var window = new SettingsWindow(vm.SettingsService);
         await window.ShowDialog(this);
     }
-
     private async void OnDbTestClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
-        var cs = vm.SettingsService.Current.Database.ConnectionString;
-        var hasCs = !string.IsNullOrWhiteSpace(cs);
+        var settings = vm.SettingsService.Current.Database;
 
-        await vm.DialogService.ShowInfoAsync(
-            "Связь с БД",
-            hasCs
-                ? $"Строка подключения:\n{cs}\n\nПроверка подключения — в разработке."
-                : "Строка подключения не задана.\n" +
-                  "Откройте «Связь с БД → Настройки подключения…» и заполните Database.ConnectionString.");
+        if (string.IsNullOrWhiteSpace(settings.ConnectionString))
+        {
+            await vm.DialogService.ShowErrorAsync(
+                "Связь с БД",
+                "Строка подключения не задана.\n\n" +
+                "Откройте «Связь с БД → Настройки подключения…» " +
+                "и заполните Database.ConnectionString.");
+            return;
+        }
+
+        vm.IsBusy = true;
+        try
+        {
+            var result = await vm.DatabaseService.TestConnectionAsync(
+                settings.ConnectionString,
+                settings.TimeoutSeconds);
+
+            if (result.Success)
+            {
+                await vm.DialogService.ShowInfoAsync("Связь с БД", result.Message);
+            }
+            else
+            {
+                await vm.DialogService.ShowErrorAsync("Связь с БД", result.Message);
+            }
+        }
+        finally
+        {
+            vm.IsBusy = false;
+        }
     }
 }

@@ -75,11 +75,11 @@ public partial class MainWindowViewModel : ObservableObject
         TotalCount > 0 && CurrentIndex >= 0 ? $"{CurrentIndex + 1} / {TotalCount}" : "—";
 
     public ObservableCollection<PhotoEntry> PhotoList { get; } = new();
-
     private readonly ObservableCollection<ExifItem> _allMetadata = new();
     public ObservableCollection<ExifItem> MetadataList { get; } = new();
     private readonly ImageConversionService _conversionService = new();
-
+    private readonly DatabaseService _databaseService = new();
+    public DatabaseService DatabaseService => _databaseService;
     private int _navVersion;
 
     public MainWindowViewModel() : this(new AppSettingsService(), new DialogService()) { }
